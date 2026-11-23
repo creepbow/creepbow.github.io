@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Creepbow Island : serveur Minecraft ATM10 français. Économie, box du jour, marché entre joueurs, classements. IP : 109.239.152.35:26365">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Creepbow Island</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout : une île en pixels dans le bandeau, puis des bandes de "couches de terrain" (herbe → terre → pierre) qui portent chaque section */
+:root {
+  --sky: #cfeef0;
+  --sea: #2f8f9d;
+  --sand: #f3e3b6;
+  --grass: #4c9a3a;
+  --grass-deep: #2f6b25;
+  --dirt: #7a5232;
+  --stone: #e9ece6;
+  --card: #ffffff;
+  --ink: #1d2a1f;
+  --muted: #5b6a5c;
+  --line: #cdd8cb;
+  --gold: #c9921a;
+  --vip: #1f8fb3;
+  --legende: #c27a0e;
+  --supporter: #b04fb5;
+  --display: "Pixelify Sans", "Courier New", monospace;
+  --body: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sky: #0f2a33; --sea: #1b5d68; --sand: #3a3423; --grass: #5db649; --grass-deep: #234d1c; --dirt: #4b3220;
+    --stone: #151b17; --card: #1d2520; --ink: #e7efe5; --muted: #a4b3a3; --line: #2f3b31; --gold: #e8b23d;
+    --vip: #4dbbe0; --legende: #eba23a; --supporter: #d983de; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --sky: #0f2a33; --sea: #1b5d68; --sand: #3a3423; --grass: #5db649; --grass-deep: #234d1c; --dirt: #4b3220;
+  --stone: #151b17; --card: #1d2520; --ink: #e7efe5; --muted: #a4b3a3; --line: #2f3b31; --gold: #e8b23d;
+  --vip: #4dbbe0; --legende: #eba23a; --supporter: #d983de; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--stone); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(1.7rem, 4vw, 2.3rem); }
+h3 { font-size: 1.25rem; }
+p { margin: 0; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* Bandeau */
+.hero { background: linear-gradient(var(--sky) 0 62%, var(--sea) 62%); margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding-top: calc(env(safe-area-inset-top, 0px) + 2.5rem); }
+.hero-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2rem; align-items: center; padding-block: 0 2.5rem; }
+.hero-grid > * { min-width: 0; }
+.eyebrow { font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--grass-deep); font-weight: 500; }
+:root:not([data-theme="light"]) .eyebrow { color: var(--grass); }
+:root[data-theme="light"] .eyebrow { color: var(--grass-deep); }
+.hero h1 { font-size: clamp(2.6rem, 8vw, 4.6rem); margin: .4rem 0 .8rem; color: var(--ink); }
+.hero h1 span { color: var(--grass); }
+.lead { font-size: 1.12rem; max-width: 34ch; color: var(--ink); }
+.ip-box { margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: .6rem; align-items: stretch; }
+.ip { font-family: var(--mono); font-size: 1.05rem; background: var(--card); color: var(--ink); border: 3px solid var(--ink); padding: .6rem .9rem; display: flex; align-items: center; user-select: all; }
+.btn { font-family: var(--display); font-size: 1.05rem; border: 3px solid var(--ink); padding: .55rem 1rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: .4rem; box-shadow: 4px 4px 0 var(--ink); transition: transform .08s, box-shadow .08s; }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.btn-green { background: var(--grass); color: #fff; }
+.btn-blurple { background: #5865f2; color: #fff; }
+.copied { font-size: .85rem; color: var(--muted); min-height: 1.3em; margin-top: .4rem; }
+.facts { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.1rem; }
+.chip { font-family: var(--mono); font-size: .78rem; background: var(--card); border: 2px solid var(--line); padding: .15rem .55rem; }
+.shot { margin: 0; background: var(--card); border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); display: grid; }
+.shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.shot figcaption { font-family: var(--mono); font-size: .78rem; padding: .45rem .7rem; color: var(--muted); border-top: 3px solid var(--ink); }
+.hero-shot { transform: rotate(1.2deg); }
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; }
+.gallery .shot { box-shadow: 4px 4px 0 var(--ink); }
+.gallery .wide { grid-column: span 2; }
+.gallery .shot img { aspect-ratio: 4 / 3; }
+.gallery .wide img { aspect-ratio: 16 / 9; height: 100%; }
+@media (max-width: 860px) { .gallery { grid-template-columns: 1fr 1fr; } .hero-shot { transform: none; } }
+@media (max-width: 560px) { .gallery { grid-template-columns: 1fr; } .gallery .wide { grid-column: auto; } }
+
+/* Couches de terrain */
+.layer-grass { height: 18px; background: repeating-linear-gradient(90deg, var(--grass) 0 18px, var(--grass-deep) 18px 22px, var(--grass) 22px 40px); }
+.layer-dirt { height: 10px; background: repeating-linear-gradient(90deg, var(--dirt) 0 14px, color-mix(in srgb, var(--dirt) 70%, #000) 14px 18px, var(--dirt) 18px 30px); }
+section { padding-block: 3.5rem; }
+.sec-head { display: grid; gap: .5rem; margin-bottom: 2rem; max-width: 62ch; }
+.sec-head p { color: var(--muted); }
+
+.feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+.feat { background: var(--card); border: 2px solid var(--line); padding: 1.3rem; display: grid; gap: .55rem; align-content: start; }
+.feat .ico { width: 34px; height: 34px; image-rendering: pixelated; }
+.feat p { color: var(--muted); font-size: .96rem; }
+.cmd { font-family: var(--mono); font-size: .85rem; background: var(--stone); border: 1px solid var(--line); padding: .05rem .35rem; white-space: nowrap; }
+
+/* Étapes */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; counter-reset: s; }
+.step { border: 3px solid var(--ink); background: var(--card); padding: 1.3rem; display: grid; gap: .5rem; align-content: start; }
+.step .n { font-family: var(--display); font-size: 2rem; color: var(--grass); line-height: 1; }
+.step p { color: var(--muted); font-size: .96rem; }
+
+/* Rangs */
+.ranks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1rem; }
+.rank { background: var(--card); border: 2px solid var(--line); border-top: 8px solid var(--c); padding: 1.2rem; display: grid; gap: .6rem; align-content: start; }
+.rank h3 { color: var(--c); }
+.rank ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .25rem; font-size: .95rem; }
+.r-membre { --c: var(--grass); } .r-supporter { --c: var(--supporter); } .r-vip { --c: var(--vip); } .r-legende { --c: var(--legende); }
+.note { margin-top: 1.2rem; font-size: .95rem; color: var(--muted); }
+.note strong { color: var(--ink); }
+
+/* Classements */
+.boards { display: grid; grid-template-columns: repeat(5, 1fr); gap: .8rem; }
+.board { background: var(--card); border: 2px solid var(--line); padding: .9rem; text-align: center; display: grid; gap: .2rem; }
+.board b { font-family: var(--display); font-size: 1.05rem; }
+.board span { font-size: .82rem; color: var(--muted); }
+
+.cta { background: var(--grass-deep); color: #fff; }
+.cta .wrap { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; justify-content: space-between; padding-block: 2.5rem; }
+.cta h2 { color: #fff; }
+.cta p { color: #d8ecd2; }
+footer { padding-block: 1.5rem 2.5rem; color: var(--muted); font-size: .85rem; }
+
+@media (max-width: 860px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .feat-grid, .steps { grid-template-columns: 1fr 1fr; }
+  .ranks { grid-template-columns: 1fr 1fr; }
+  .boards { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px) {
+  .feat-grid, .steps, .ranks { grid-template-columns: 1fr; }
+  .boards { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+</head>
+<body>
+
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Serveur Minecraft moddé · Français</div>
+      <h1>Creepbow <span>Island</span></h1>
+      <p class="lead">Un serveur All the Mods 10 convivial, avec une vraie économie, des box et des classements en direct. Zéro pay-to-win.</p>
+      <div class="ip-box">
+        <div class="ip" id="ip">109.239.152.35:26365</div>
+        <button class="btn btn-green" id="copy" type="button">Copier l'IP</button>
+        <a class="btn btn-blurple" href="https://discord.gg/GHVGgk3eG" target="_blank" rel="noopener">Discord</a>
+      </div>
+      <div class="copied" id="copied" aria-live="polite"></div>
+      <div class="facts">
+        <span class="chip">ATM10 v8.6</span>
+        <span class="chip">1.21.1 NeoForge</span>
+        <span class="chip">470+ mods</span>
+        <span class="chip">PvP activé</span>
+      </div>
+    </div>
+    <figure class="shot hero-shot">
+      <img src="spawn.jpg" alt="Le spawn de Creepbow Island de nuit, avec les classements en hologrammes" width="960" height="540">
+      <figcaption>Le spawn, avec les top 10 en direct</figcaption>
+    </figure>
+  </div>
+</header>
+<div class="layer-grass"></div><div class="layer-dirt"></div>
+
+<main>
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Ce qui t'attend</div>
+        <h2>Tout ATM10, et encore plus</h2>
+        <p>Le modpack complet avec ses quêtes, plus des systèmes faits maison pour jouer ensemble.</p>
+      </div>
+      <div class="feat-grid">
+        <article class="feat">
+          <canvas class="ico" data-ico="coin" width="8" height="8"></canvas>
+          <h3>Économie Creepcoins</h3>
+          <p>10 Creepcoins par heure de jeu. Dépense-les dans <span class="cmd">/shop</span>, vends tes minerais avec <span class="cmd">/vendre</span>.</p>
+        </article>
+        <article class="feat">
+          <canvas class="ico" data-ico="chest" width="8" height="8"></canvas>
+          <h3>Marché entre joueurs</h3>
+          <p>Mets en vente ce que tu tiens en main avec <span class="cmd">/marche vendre &lt;prix&gt;</span>. Tu es payé même hors ligne.</p>
+        </article>
+        <article class="feat">
+          <canvas class="ico" data-ico="box" width="8" height="8"></canvas>
+          <h3>Box du jour</h3>
+          <p>Une Box Commune gratuite chaque jour au spawn. Clic droit pour l'ouvrir, Maj + clic droit pour voir son contenu.</p>
+        </article>
+        <article class="feat">
+          <canvas class="ico" data-ico="trophy" width="8" height="8"></canvas>
+          <h3>Classements en direct</h3>
+          <p>Cinq top 10 affichés au spawn et sur Discord, mis à jour toutes les minutes.</p>
+        </article>
+        <article class="feat">
+          <canvas class="ico" data-ico="map" width="8" height="8"></canvas>
+          <h3>Carte en ligne</h3>
+          <p>Explore le monde en 3D depuis ton navigateur : <a href="http://109.239.152.35:8100" target="_blank" rel="noopener">voir la carte</a>.</p>
+        </article>
+        <article class="feat">
+          <canvas class="ico" data-ico="house" width="8" height="8"></canvas>
+          <h3>Confort de jeu</h3>
+          <p><span class="cmd">/home</span> <span class="cmd">/rtp</span> <span class="cmd">/tpa</span> <span class="cmd">/back</span> <span class="cmd">/spawn</span>, et les claims FTB Chunks pour protéger ta base.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="layer-grass"></div><div class="layer-dirt"></div>
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">En images</div>
+        <h2>Un tour sur l'île</h2>
+        <p>Des captures prises en jeu sur le serveur.</p>
+      </div>
+      <div class="gallery">
+        <figure class="shot wide"><img src="box.jpg" alt="Les box du jour et des rangs au spawn" loading="lazy" width="960" height="540"><figcaption>Les box au spawn : une gratuite chaque jour</figcaption></figure>
+        <figure class="shot"><img src="ile.jpg" alt="Une île flottante colorée la nuit" loading="lazy" width="960" height="720"><figcaption>Des dimensions à explorer</figcaption></figure>
+        <figure class="shot"><img src="machines.jpg" alt="Une installation de machines moddées" loading="lazy" width="960" height="720"><figcaption>Automatise tout avec les mods</figcaption></figure>
+        <figure class="shot"><img src="neige.jpg" alt="Une forêt enneigée au bord d'un lac" loading="lazy" width="960" height="720"><figcaption>Des biomes à perte de vue</figcaption></figure>
+        <figure class="shot"><img src="base.jpg" alt="L'intérieur d'une base de joueur" loading="lazy" width="960" height="540"><figcaption>Construis ta base</figcaption></figure>
+        <figure class="shot wide"><img src="shop.jpg" alt="Le menu du shop en jeu" loading="lazy" width="960" height="540"><figcaption>Le /shop et le /marche avec leur interface</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <div class="layer-grass"></div><div class="layer-dirt"></div>
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Rejoindre</div>
+        <h2>Prêt en 3 étapes</h2>
+        <p>Il faut un PC qui tient ATM10 : prévois au moins 10 Go de RAM pour le jeu.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h3>Installe CurseForge</h3><p>Télécharge le launcher CurseForge sur curseforge.com et connecte ton compte Minecraft.</p></div>
+        <div class="step"><div class="n">2</div><h3>Prends ATM10 v8.6</h3><p>Cherche « All the Mods 10 », choisis la version 8.6 (la même que le serveur), puis mets 10 Go de RAM dans les réglages.</p></div>
+        <div class="step"><div class="n">3</div><h3>Connecte-toi</h3><p>Multijoueur → Ajouter un serveur → <span class="cmd">109.239.152.35:26365</span>. Bienvenue sur l'île !</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="layer-grass"></div><div class="layer-dirt"></div>
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Rangs</div>
+        <h2>Soutiens le serveur, sans pay-to-win</h2>
+        <p>Les rangs donnent du confort et des cosmétiques. Ils se prennent avec <span class="cmd">/buy</span> en jeu.</p>
+      </div>
+      <div class="ranks">
+        <div class="rank r-membre"><h3>Membre</h3><ul><li>Gratuit, dès ta connexion</li><li>Box du jour au spawn</li><li>10 Creepcoins par heure</li><li>Shop, marché, homes</li></ul></div>
+        <div class="rank r-supporter"><h3>Supporter</h3><ul><li>3 homes</li><li><span class="cmd">/hat</span></li><li>1 Box Cosmétique par jour</li><li>Couleur dans le tab</li></ul></div>
+        <div class="rank r-vip"><h3>VIP</h3><ul><li>5 homes</li><li><span class="cmd">/hat</span> et <span class="cmd">/enderchest</span></li><li>/rtp toutes les 5 min</li><li>2 Box Cosmétiques par jour</li></ul></div>
+        <div class="rank r-legende"><h3>Légende</h3><ul><li>10 homes</li><li><span class="cmd">/nickname</span> en plus</li><li>/rtp toutes les 2 min, /home sans attente</li><li>3 Box Cosmétiques par jour</li></ul></div>
+      </div>
+      <p class="note"><strong>Les Box Cosmétiques</strong> donnent uniquement de la déco : teintures, bannières, tableaux, disques, têtes… Rien qui aide à progresser.</p>
+    </div>
+  </section>
+
+  <div class="layer-grass"></div><div class="layer-dirt"></div>
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Classements</div>
+        <h2>Grimpe dans les top 10</h2>
+        <p>Les hologrammes du spawn et le salon Discord affichent les meilleurs joueurs.</p>
+      </div>
+      <div class="boards">
+        <div class="board"><b>Quêtes</b><span>quêtes FTB finies</span></div>
+        <div class="board"><b>Temps de jeu</b><span>heures sur le serveur</span></div>
+        <div class="board"><b>Monstres</b><span>créatures tuées</span></div>
+        <div class="board"><b>Blocs</b><span>blocs minés</span></div>
+        <div class="board"><b>Morts</b><span>le top dont on n'est pas fier</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="cta">
+  <div class="wrap">
+    <div>
+      <h2>On t'attend sur l'île</h2>
+      <p>Rejoins le Discord pour les annonces, les events et l'aide.</p>
+    </div>
+    <a class="btn btn-blurple" href="https://discord.gg/GHVGgk3eG" target="_blank" rel="noopener">Rejoindre le Discord</a>
+  </div>
+</div>
+<footer class="wrap">Creepbow Island · Serveur non officiel, non affilié à Mojang ni à Microsoft.</footer>
+
+<script>
+(function () {
+  // Copier l'IP
+  var btn = document.getElementById('copy'), msg = document.getElementById('copied'), ipEl = document.getElementById('ip');
+  btn.addEventListener('click', function () {
+    var ip = ipEl.textContent;
+    function fallback() {
+      var r = document.createRange(); r.selectNodeContents(ipEl);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      msg.textContent = 'IP sélectionnée : fais Ctrl+C pour la copier.';
+    }
+    try {
+      navigator.clipboard.writeText(ip).then(function () { msg.textContent = 'IP copiée ! Colle-la dans Multijoueur → Ajouter un serveur.'; }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  // Île en pixels : chaque lettre = une couleur
+  var MAP = [
+    '................................',
+    '................................',
+    '...........kk.kkk...............',
+    '.........kkkkkkkkkk.............',
+    '........kk..kkt..kkk............',
+    '.............t..................',
+    '.............t........cc........',
+    '.............t.......cGGc.......',
+    '..............t......cGGc.......',
+    '..............t.......cc........',
+    '.........gggggtggggg............',
+    '.......gggggggggggggggg.........',
+    '.....ggggggggggggggggggggg......',
+    '....sssgggggggggggggggggsss.....',
+    '..ssssddddddddddddddddddsssss...',
+    'wwwwssddddddddddddddddddddsswwww',
+    'wwwwwwppppppppppppppppppppwwwwww',
+    'WwwwwwwwppppppppppppppppwwwwwwwW',
+    'wwWwwwwwwwwwppppppppwwwwwwwWwwww',
+    'wwwwwwWwwwwwwwwwwwwwwwwwwwwwwwww',
+    'wWwwwwwwwwwwWwwwwwwwwwwWwwwwwwww',
+    'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww'
+  ];
+  function drawIsland() {
+    var c = document.getElementById('island'), x = c.getContext('2d');
+    var pal = {
+      k: css('--grass'), t: css('--dirt'), g: css('--grass'), s: css('--sand'), d: css('--dirt'),
+      p: '#8b8d88', w: css('--sea'), W: '#ffffff55', c: '#3f8f2f', G: '#1d3b18'
+    };
+    x.clearRect(0, 0, 32, 22);
+    for (var y = 0; y < MAP.length; y++) for (var i = 0; i < 32; i++) {
+      var ch = MAP[y][i]; if (ch === '.') continue;
+      x.fillStyle = pal[ch]; x.fillRect(i, y, 1, 1);
+    }
+    // touches d'herbe plus sombre
+    x.fillStyle = css('--grass-deep');
+    [[8,11],[12,12],[17,11],[20,12],[6,12],[15,13],[10,13],[22,13]].forEach(function (p) { x.fillRect(p[0], p[1], 1, 1); });
+  }
+
+  // Petites icônes 8×8
+  var ICONS = {
+    coin:   ['..oooo..', '.oyyyyo.', 'oyyooyyo', 'oyoyyyyo', 'oyoyyyyo', 'oyyooyyo', '.oyyyyo.', '..oooo..'],
+    chest:  ['bbbbbbbb', 'bnnnnnnb', 'bnnnnnnb', 'bbbyybbb', 'bnnyynnb', 'bnnnnnnb', 'bnnnnnnb', 'bbbbbbbb'],
+    box:    ['..vvvv..', '.vVVVVv.', 'vVVyyVVv', 'vVyVVyVv', 'vVVVyVVv', 'vVVyVVVv', '.vVVVVv.', '..vyyv..'],
+    trophy: ['yyyyyyyy', 'y.yyyy.y', 'y.yyyy.y', '.yyyyyy.', '..yyyy..', '...yy...', '..oooo..', '.oooooo.'],
+    map:    ['nnnnnnnn', 'nggwwggn', 'nggwwrgn', 'nwwgggwn', 'nwwggrgn', 'ngggwwgn', 'nggwwggn', 'nnnnnnnn'],
+    house:  ['...rr...', '..rrrr..', '.rrrrrr.', 'rrrrrrrr', '.nnnnnn.', '.nbbnyn.', '.nbbnnn.', '.nbbnnn.']
+  };
+  function drawIcons() {
+    var pal = { o: '#8a5a00', y: css('--gold'), b: '#5a3a1e', n: '#a8713f', v: '#6b2f8f', V: '#9b55c4', g: css('--grass'), w: css('--sea'), r: '#c0392b' };
+    document.querySelectorAll('canvas[data-ico]').forEach(function (c) {
+      var g = c.getContext('2d'), m = ICONS[c.dataset.ico];
+      g.clearRect(0, 0, 8, 8);
+      for (var y = 0; y < 8; y++) for (var i = 0; i < 8; i++) {
+        var ch = m[y][i]; if (ch === '.') continue;
+        g.fillStyle = pal[ch]; g.fillRect(i, y, 1, 1);
+      }
+    });
+  }
+  function draw() { drawIcons(); }
+  draw();
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', draw);
+  }
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+
+</body>
+</html>
